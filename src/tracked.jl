@@ -47,7 +47,7 @@ making the below implementation preferable.
 mutable struct TrackedReal{V<:Real,D<:Real,O} <: Real
     value::V
     deriv::D
-    tape::InstructionTape
+    tape::AbstractInternalTape
     index::Int
     origin::O
     TrackedReal{V,D,O}(value, deriv, tape, index, origin) where {V,D,O} = new{V,D,O}(value, deriv, tape, index, origin)
@@ -56,9 +56,9 @@ mutable struct TrackedReal{V<:Real,D<:Real,O} <: Real
     TrackedReal{V,D,O}(value) where {V,D,O} = new{V,D,O}(value, zero(D), NULL_TAPE, NULL_INDEX)
 end
 
-TrackedReal(v::V, a::D, tp::InstructionTape, i::Int, o::O) where {V,D,O} = TrackedReal{V,D,O}(v, a, tp, i, o)
+TrackedReal(v::V, a::D, tp::AbstractInternalTape, i::Int, o::O) where {V,D,O} = TrackedReal{V,D,O}(v, a, tp, i, o)
 
-TrackedReal(v::V, a::D, tp::InstructionTape = NULL_TAPE) where {V,D} = TrackedReal{V,D,Nothing}(v, a, tp)
+TrackedReal(v::V, a::D, tp::AbstractInternalTape = NULL_TAPE) where {V,D} = TrackedReal{V,D,Nothing}(v, a, tp)
 
 # we define these special cases so that the "constructor <--> convert" pun holds for `TrackedReal`
 # this is Jarett's favorite piece of code. A true work of art.
@@ -70,10 +70,10 @@ TrackedReal(v::V, a::D, tp::InstructionTape = NULL_TAPE) where {V,D} = TrackedRe
 struct TrackedArray{V,D,N,VA,DA} <: AbstractArray{TrackedReal{V,D,TrackedArray{V,D,N,VA,DA}},N}
     value::VA
     deriv::DA
-    tape::InstructionTape
+    tape::AbstractInternalTape
     function TrackedArray{V,D,N,VA,DA}(value::AbstractArray{V,N},
                                        deriv::AbstractArray{D,N},
-                                       tape::InstructionTape) where {V,D,N,VA,DA}
+                                       tape::AbstractInternalTape) where {V,D,N,VA,DA}
         @assert IndexStyle(value) === IndexLinear()
         @assert size(value) === size(deriv)
         return new{V,D,N,VA,DA}(value, deriv, tape)
@@ -82,7 +82,7 @@ end
 
 function TrackedArray(value::AbstractArray{V,N},
                       deriv::AbstractArray{D,N},
-                      tape::InstructionTape) where {V,D,N}
+                      tape::AbstractInternalTape) where {V,D,N}
     return TrackedArray{V,D,N,typeof(value),typeof(deriv)}(value, deriv, tape)
 end
 
@@ -114,7 +114,7 @@ istracked(::AbstractArray{T}) where {T} = T <: TrackedReal || !(isconcretetype(T
 
 @inline derivtype(::TrackedReal{V,D}) where {V,D} = D
 @inline derivtype(::Type{TrackedReal{V,D,O}}) where {V,D,O} = D
-@inline derivtype(t::TrackedArray{V,D}) where {V,D} = D
+@inline derivtype(::TrackedArray{V,D}) where {V,D} = D
 @inline derivtype(::Type{TrackedArray{V,D,N,VA,DA}}) where {V,D,VA,DA,N} = D
 
 @inline origintype(::TrackedReal{V,D,O}) where {V,D,O} = O
@@ -464,19 +464,19 @@ Base.rtoldefault(::Type{T}) where {T<:TrackedReal} = sqrt(eps(T))
 # track/track! #
 ################
 
-track(x::Real, tp::InstructionTape = InstructionTape()) = track(x, typeof(x), tp)
+track(x::Real, tp::AbstractInternalTape = InstructionTape()) = track(x, typeof(x), tp)
 
-track(x::AbstractArray, tp::InstructionTape = InstructionTape()) = track(x, eltype(x), tp)
+track(x::AbstractArray, tp::AbstractInternalTape = InstructionTape()) = track(x, eltype(x), tp)
 
-track(x::Real, ::Type{D}, tp::InstructionTape = InstructionTape()) where {D} = TrackedReal(x, zero(D), tp)
+track(x::Real, ::Type{D}, tp::AbstractInternalTape = InstructionTape()) where {D} = TrackedReal(x, zero(D), tp)
 
-track(x::AbstractArray, ::Type{D}, tp::InstructionTape = InstructionTape()) where {D} = TrackedArray(x, fill!(similar(x, D), zero(D)), tp)
+track(x::AbstractArray, ::Type{D}, tp::AbstractInternalTape = InstructionTape()) where {D} = TrackedArray(x, fill!(similar(x, D), zero(D)), tp)
 
 track!(t::TrackedArray, x::AbstractArray) = (value!(t, x); unseed!(t); t)
 
 track!(t::TrackedReal, x::Real) = (value!(t, x); unseed!(t); t)
 
-function track!(t::AbstractArray{TrackedReal{D,D,Nothing}}, x::AbstractArray, tp::InstructionTape) where D
+function track!(t::AbstractArray{TrackedReal{D,D,Nothing}}, x::AbstractArray, tp::AbstractInternalTape) where D
     for i in eachindex(t)
         t[i] = track(x[i], D, tp)
     end

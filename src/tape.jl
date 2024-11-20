@@ -4,7 +4,22 @@
 
 abstract type AbstractInstruction end
 
-const InstructionTape = Vector{AbstractInstruction}
+abstract type AbstractInternalTape end
+
+# const InstructionTape = Vector{AbstractInstruction}
+
+struct InstructionTape <: AbstractInternalTape
+    tp::Vector{AbstractInstruction}
+end
+InstructionTape() = InstructionTape(Vector{AbstractInstruction}())
+Base.pop!(it::InstructionTape) = pop!(it.tp)
+Base.push!(it::InstructionTape, item) = push!(it.tp, item)
+Base.empty!(it::InstructionTape) = empty!(it.tp)
+Base.getindex(it::InstructionTape, idx) = getindex(it.tp, idx)
+Base.iterate(it::InstructionTape) = iterate(it.tp)
+Base.iterate(it::InstructionTape, idx) = iterate(it.tp, idx)
+Base.length(it::InstructionTape) = length(it.tp)
+Base.lastindex(it::InstructionTape) = lastindex(it.tp)
 
 function record!(tp::InstructionTape, ::Type{InstructionType}, args...) where InstructionType
     tp !== NULL_TAPE && push!(tp, InstructionType(args...))
@@ -84,7 +99,10 @@ end
 
 function reverse_pass!(tape::InstructionTape)
     for i in length(tape):-1:1
+        # println("**** i = $i ****")
+        # @show tape[i]
         reverse_exec!(tape[i])
+        # @show tape[i]
     end
     return nothing
 end

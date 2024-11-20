@@ -21,6 +21,9 @@ using MacroTools
 
 using ChainRulesCore
 
+# using JLD2
+import Serialization
+
 # Not all operations will be valid over all of these types, but that's okay; such cases
 # will simply error when they hit the original operation in the overloaded definition.
 const ARRAY_TYPES = (:AbstractArray, :AbstractVector, :AbstractMatrix, :Array, :Vector, :Matrix)
@@ -51,6 +54,9 @@ include("derivatives/elementwise.jl")
 include("derivatives/linalg/arithmetic.jl")
 include("derivatives/linalg/reductions.jl")
 include("derivatives/linalg/special.jl")
+
+include("compressed.jl")
+
 include("api/utils.jl")
 include("api/Config.jl")
 include("api/tape.jl")
