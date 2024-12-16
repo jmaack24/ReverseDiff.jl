@@ -99,10 +99,14 @@ end
 
 function reverse_pass!(tape::InstructionTape)
     for i in length(tape):-1:1
-        # println("**** i = $i ****")
-        # @show tape[i]
+        # if typeof(tape[i]) <: SpecialInstruction
+        #     println("**** i = $i ****")
+        #     @show tape[i]
+        # end
         reverse_exec!(tape[i])
-        # @show tape[i]
+        # if typeof(tape[i]) <: SpecialInstruction
+        #     @show tape[i]
+        # end
     end
     return nothing
 end

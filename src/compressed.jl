@@ -10,6 +10,10 @@ function value(input::AbstractArray{T}) where {T<:TrackedReal}
     return vals
 end
 
+function value(input::Tuple)
+    return map(value, input)
+end
+
 function value!(input::AbstractArray{T}, vals::AbstractArray) where {T<:TrackedReal}
     for i in eachindex(input, vals)
         value!(input[i], vals[i])
@@ -17,12 +21,12 @@ function value!(input::AbstractArray{T}, vals::AbstractArray) where {T<:TrackedR
     return
 end
 
-function value!(input::AbstractArray{T}, vals::AbstractArray{S}) where {T<:TrackedReal, S<:TrackedReal}
-    for i in eachindex(input, vals)
-        value!(input[i], value(vals[i]))
-    end
-    return
-end
+# function value!(input::AbstractArray{T}, vals::AbstractArray{S}) where {T<:TrackedReal, S<:TrackedReal}
+#     for i in eachindex(input, vals)
+#         value!(input[i], value(vals[i]))
+#     end
+#     return
+# end
 
 function value!(tup::Tuple, vals::Tuple)
     for i in eachindex(tup, vals)
@@ -466,8 +470,8 @@ function _DiskInstruction(
     # di.fio = my_io
     close(my_io)
 
-    @show my_path
-    @show length(internal(tape))
+    # @show my_path
+    # @show length(internal(tape))
 
     write_tape(di, tape)
 
@@ -520,8 +524,14 @@ end
 
     reverse_pass!(hdtp)
 
+    # @show tin
+    # @show deriv(tin)
+
     increment_deriv!(di.instruction_input, deriv(tin))
     unseed!(di.instruction_output)
+
+    # @show di.instruction_input
+    # @show deriv(di.instruction_input)
 
     return
 
@@ -547,6 +557,8 @@ end
 
     # @show tout
     # @show di.instruction_input
+
+    write_tape(di, hdtp)
 
     return
 
@@ -605,7 +617,7 @@ end
 
 function _single_precision(f, x, args...)
 
-    println("Building single CompressedInstruction...")
+    # println("Building single CompressedInstruction...")
 
     tp = tape(x)
     ctp = InstructionTape()
@@ -681,15 +693,19 @@ end
 
 function _tape_to_disk(f, x, args...)
 
-    println("Building DiskInstruction...")
+    # println("Building DiskInstruction...")
 
     tp = tape(first(x))
     ctp = InstructionTape()
+
+    @assert tp !== NULL_TAPE
 
     cin = tracked_copy(x, ctp)
 
     cout = apply(f, cin, args...)
     y = tracked_copy(cout, tp)
+
+    # @show ctp
 
     hdtp = HDTape(ctp, cin, cout)
 
@@ -699,10 +715,25 @@ function _tape_to_disk(f, x, args...)
 
 end
 
+# function ChainRulesCore.rrule(::typeof(_tape_to_disk), f, x, p)
+
+#     tp = tape(first(x))
+#     ctp = InstructionTape()
+
+#     cin = tracked_copy(x, ctp)
+#     cout = apply(f, cin, p)
+#     y = tracked_copy(cout, tp)
+
+#     return
+
+# end
+
 tape_to_disk(f, x::TrackedType, args...) = _tape_to_disk(f, x, args...)
-tape_to_disk(f, x::AbstractArray{T}, args...) where {T <: TrackedType} = _tape_to_disk(f, x, args...)
+tape_to_disk(f, x::AbstractArray{T}, args...) where {T <: TrackedReal} = _tape_to_disk(f, x, args...)
 tape_to_disk(f, x::TrackedType, y::TrackedType, args...) = _tape_to_disk(f, (x,y), args...)
-tape_to_disk(f, x::AbstractArray{T}, y::AbstractArray{T}, args...) where {T <: TrackedType} = _tape_to_disk(f, (x,y), args...)
+# tape_to_disk(f, x::AbstractArray{T}, y::AbstractArray{T}, args...) where {T <: TrackedReal} = _tape_to_disk(f, (x,y), args...)
+# tape_to_disk(f, x::AbstractArray{T}, y::TrackedArray, args...) where {T<:TrackedReal} = _tape_to_disk(f, (x, y), args...)
+# tape_to_disk(f, x::TrackedArray, y::AbstractArray{T}, args...) where {T<:TrackedReal} = _tape_to_disk(f, (x, y), args...)
 
 function do_compression(expr, f_to_apply)
     args = map(MacroTools.splitarg, expr.args)
