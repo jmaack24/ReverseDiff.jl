@@ -510,12 +510,15 @@ end
     tin = input(hdtp)
     tout = output(hdtp)
 
+    unseed!(tin)
     pull_value!(di.instruction_output)
     pull_deriv!(di.instruction_output)
     value!(tout, value(di.instruction_output))
     deriv!(tout, deriv(di.instruction_output))
     push_deriv!(tout)
-    unseed!(tin)
+
+    # @show typeof(di.instruction_output)
+    # @show typeof(tout)
 
     # @show di.instruction_output
     # @show tout
@@ -695,8 +698,13 @@ function _tape_to_disk(f, x, args...)
 
     # println("Building DiskInstruction...")
 
+    # @show typeof(x)
+    # @show args
+
     tp = tape(first(x))
     ctp = InstructionTape()
+
+    # @show tp
 
     @assert tp !== NULL_TAPE
 
@@ -731,6 +739,7 @@ end
 tape_to_disk(f, x::TrackedType, args...) = _tape_to_disk(f, x, args...)
 tape_to_disk(f, x::AbstractArray{T}, args...) where {T <: TrackedReal} = _tape_to_disk(f, x, args...)
 tape_to_disk(f, x::TrackedType, y::TrackedType, args...) = _tape_to_disk(f, (x,y), args...)
+tape_to_disk(f, x::TrackedArray, y::Vector{T}, args...) where {T <: TrackedReal} = _tape_to_disk(f, (x, y), args...)
 # tape_to_disk(f, x::AbstractArray{T}, y::AbstractArray{T}, args...) where {T <: TrackedReal} = _tape_to_disk(f, (x,y), args...)
 # tape_to_disk(f, x::AbstractArray{T}, y::TrackedArray, args...) where {T<:TrackedReal} = _tape_to_disk(f, (x, y), args...)
 # tape_to_disk(f, x::TrackedArray, y::AbstractArray{T}, args...) where {T<:TrackedReal} = _tape_to_disk(f, (x, y), args...)
